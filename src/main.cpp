@@ -1,9 +1,7 @@
 // Disable linker warning about truncation to 255 characters in debug info with std::string
 #pragma warning (disable: 4786)
 
-//
 //   Standard include headers
-//
 #define _WIN32_WINNT 0x0400 // this is required to use the TryEnterCriticalSection() function
 
 #include <WinSock2.h>
@@ -15,40 +13,27 @@
 #include <sstream>
 #include <iomanip>
 
-//
 //  EVaRT SDK headers
-//
-
 #include "EVaRT.h"
 
-//
 // Our project headers
-//
 #include "wrappers.h"
 #include "fifo.h"
 #include "recorders.h"
 #include "utils.h"
 
-//
 // Prototypes for local functions
-//
 static int EVaRT_Data_Handler(int DataType, void *Data); // EVaRT SDK thread calls this function
 static int Handle_Error(const char * msg, int code);
 
-//
 //  Constants
-//
 #define DEFAULT_HOST			"localhost"				// EVaRT host machine
 #define DEFAULT_ITERATIONS		"10000"					// number of iterations to perform
-//
+
 //  Globals
-//
 static CRITICAL_SECTION		gCriticalSection;			// Windows critical section object
-
 static TrcRecorder*			gTrcRecorder = NULL;
-
 static bool gGotMarkerList = false;
-static unsigned long gCount = 0;
 
 //socket used for communicating with PedSim server
 SOCKET ConnectSocket = INVALID_SOCKET;
@@ -58,7 +43,6 @@ int main(int argc, char* argv[])
 {
 	char	lHost[80];
 	int		lDataTypes;
-	int		lNumFrames;
 	int		lNumTypes = 0;
 
 	//if we are passed a host as an argument, use it. otherwise prompt
@@ -67,8 +51,6 @@ int main(int argc, char* argv[])
 	}
 	else {
 		printf("\n\nPress <Enter> to accept default values\n\n");
-
-		// Get host name
 		promptInput("Enter host machine", DEFAULT_HOST, lHost, 80);
 	}
 
@@ -90,12 +72,9 @@ int main(int argc, char* argv[])
 
 	struct sockaddr_in clientService;
 	clientService.sin_family = AF_INET;
-	//std::string addr(lHost);
-	//printf("Got host from lhost: \"%s\"\n", addr.c_str());
 	clientService.sin_addr.s_addr = inet_addr("192.168.1.2");
 	clientService.sin_port = htons(8888);
 
-	//----------------------
 	// Connect to server.
 	iResult = connect(ConnectSocket, (SOCKADDR*)&clientService, sizeof(clientService));
 	if (iResult == SOCKET_ERROR) {
@@ -115,10 +94,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-
 	// Determine which data types will be streamed
 	lDataTypes = 0;
-	//if (gTrcRecorder)	
 	lDataTypes |= TRC_DATA;
 	lNumTypes++;
 
@@ -156,10 +133,7 @@ int main(int argc, char* argv[])
 				if (!gGotMarkerList)	printf("Did not get a marker list\n");
 			}
 
-
-
 			printf("\n\n");
-
 
 			// Tell EVaRT which data types to send us
 			if (Handle_Error("EVaRT_SetDataTypesWanted", EVaRT_SetDataTypesWanted(lDataTypes)) == OK)
@@ -259,43 +233,39 @@ static int EVaRT_Data_Handler(int DataType, void *Data)
 
 	switch (DataType)
 	{
-	case MARKER_LIST:
-	{
-						sMarkerList *p = (sMarkerList *)Data;
+		case MARKER_LIST:
+		{
+			sMarkerList *p = (sMarkerList *)Data;
 
-						if (p->nMarkers > 0)
-						{
-							gGotMarkerList = true;
-							numMarkers = p->nMarkers;
-						}
-	}
+			if (p->nMarkers > 0)
+			{
+				gGotMarkerList = true;
+				numMarkers = p->nMarkers;
+			}
+		}
 		break;
-	case TRC_DATA:
-	{
-					 TrcFrameWrapper f((sTrcFrame *)Data, numMarkers);
-					 Point3 pt;
+		case TRC_DATA:
+		{
+			TrcFrameWrapper f((sTrcFrame *)Data, numMarkers);
+			Point3 pt;
 
-					 f.GetMarkerLocation(0, pt);
-					 fprintf(stderr, "%f, %f, %f\n", pt[0], pt[1], pt[2]);
+			f.GetMarkerLocation(0, pt);
+			fprintf(stderr, "%f, %f, %f\n", pt[0], pt[1], pt[2]);
 
-					 stringStream.clear();
-					 stringStream.str(std::string());
-					 stringStream << "head," << pt[0] << "," << pt[1] << "," << pt[2] << "\n";
-					 copyOfStr = stringStream.str();
-					 iResult = send(ConnectSocket, copyOfStr.c_str(), copyOfStr.length(), 0);
-					 if (iResult == SOCKET_ERROR) {
-						 printf("send failed with error: %d\n", WSAGetLastError());
-					 }
-	}
+			stringStream.clear();
+			stringStream.str(std::string());
+			stringStream << "head," << pt[0] << "," << pt[1] << "," << pt[2] << "\n";
+			copyOfStr = stringStream.str();
+			iResult = send(ConnectSocket, copyOfStr.c_str(), copyOfStr.length(), 0);
+			if (iResult == SOCKET_ERROR) {
+				printf("send failed with error: %d\n", WSAGetLastError());
+			}
+		}
 		break;
-
 	}
-
 	LeaveCriticalSection(&gCriticalSection);
 	return 0;
 }
-
-
 
 // Print error messages from calling EVaRT SDK functions
 static int Handle_Error(const char * msg, int code)
@@ -307,24 +277,19 @@ static int Handle_Error(const char * msg, int code)
 		case ERRFLAG:
 			printf("%s: General Error\n", msg);
 			break;
-
 		case API_ERROR:
 			printf("%s: API Error\n", msg);
 			break;
-
 		case NETWORK_ERROR:
 			printf("%s: Network Error\n", msg);
 			break;
-
 		case FILE_ERROR:
 			printf("%s: File Error\n", msg);
 			break;
-
 		default:
 			printf("%s: Unknown Error\n", msg);
 			break;
 		}
 	}
-
 	return code;
 }
