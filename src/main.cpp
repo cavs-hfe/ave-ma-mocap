@@ -42,16 +42,19 @@ SOCKET ConnectSocket = INVALID_SOCKET;
 int main(int argc, char* argv[])
 {
 	char	lHost[80];
+	char	lIpAddr[80];
 	int		lDataTypes;
 	int		lNumTypes = 0;
 
 	//if we are passed a host as an argument, use it. otherwise prompt
-	if (argc == 2) {
+	if (argc == 3) {
 		strcpy(lHost, argv[1]);
+		strcpy(lIpAddr, argv[2]);
 	}
 	else {
 		printf("\n\nPress <Enter> to accept default values\n\n");
 		promptInput("Enter host machine", DEFAULT_HOST, lHost, 80);
+		promptInput("Enter local machine", DEFAULT_HOST, lIpAddr, 80);
 	}
 
 	//connect socket
@@ -72,7 +75,7 @@ int main(int argc, char* argv[])
 
 	struct sockaddr_in clientService;
 	clientService.sin_family = AF_INET;
-	clientService.sin_addr.s_addr = inet_addr("192.168.1.2");
+	clientService.sin_addr.s_addr = inet_addr(lIpAddr);
 	clientService.sin_port = htons(8888);
 
 	// Connect to server.
@@ -247,14 +250,22 @@ static int EVaRT_Data_Handler(int DataType, void *Data)
 		case TRC_DATA:
 		{
 			TrcFrameWrapper f((sTrcFrame *)Data, numMarkers);
-			Point3 pt;
+			Point3 pt1;
+			Point3 pt2;
 
-			f.GetMarkerLocation(0, pt);
-			fprintf(stderr, "%f, %f, %f\n", pt[0], pt[1], pt[2]);
+			f.GetMarkerLocation(0, pt1);
+			f.GetMarkerLocation(2, pt2);
+			fprintf(stderr, "0, %f, %f, %f\n", pt1[0], pt1[1], pt1[2]);
+			fprintf(stderr, "2, %f, %f, %f\n", pt2[0], pt2[1], pt2[2]);
+
+			Point3 mid;
+			mid[0] = (pt1[0] + pt2[0]) / 2;
+			mid[1] = (pt1[1] + pt2[1]) / 2;
+			mid[2] = (pt1[2] + pt2[2]) / 2;
 
 			stringStream.clear();
 			stringStream.str(std::string());
-			stringStream << "head," << pt[0] << "," << pt[1] << "," << pt[2] << "\n";
+			stringStream << "head," << mid[0] << "," << mid[1] << "," << mid[2] << "\n";
 			copyOfStr = stringStream.str();
 			iResult = send(ConnectSocket, copyOfStr.c_str(), copyOfStr.length(), 0);
 			if (iResult == SOCKET_ERROR) {
