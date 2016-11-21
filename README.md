@@ -1,2 +1,2 @@
-# ped-sim-mocap
-Mocap client for the Pedestrian Simulator
+# ave-ma-mocap
+Motion Analysis Mocap client for the AVENUE Simulator
